@@ -27,10 +27,17 @@ class EmVueMetrics:
             guages_unused = set(self.guages.keys())
             for dev_name, dev in usage.items():
                 ch = dev['channels']['Main']
+
                 power_guage_name = f"{dev_name.replace('-', '_')}_power"
                 guages_unused.discard(power_guage_name)
                 guage = self.get_guage(power_guage_name, "Power (W)")
                 guage.set(ch['usage'])
+
+                outlet_state_name = f"{dev_name.replace('-', '_')}_outlet"
+                guages_unused.discard(outlet_state_name)
+                guage = self.get_guage(outlet_state_name, "Number of outlets turned on")
+                guage.set(dev['outlet'])
+
             for name in guages_unused:
                 prometheus_client.REGISTRY.unregister(self.guages[name])
                 del self.guages[name]
