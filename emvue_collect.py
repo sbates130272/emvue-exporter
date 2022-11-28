@@ -26,8 +26,10 @@ def sumarize_multi_dev(data):
                     'name': sumary_name,
                     'devs': [],
                     'channels': {},
+                    'outlet': 0,
                 }
             data[sumary_name]['devs'].append(name)
+            data[sumary_name]['outlet'] += data[name]['outlet']
             for ch_name in data[name]['channels']:
                 ch = data[name]['channels'][ch_name]
                 if ch_name not in data[sumary_name]['channels']:
@@ -45,6 +47,7 @@ def collect_usage(retrys=3):
 
             devices = vue.get_devices()
             device_gids = set(d.device_gid for d in devices)
+            dev_from_gid = {d.device_gid: d for d in devices}
 
             now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-7)))
             usageDict = vue.get_device_list_usage(list(device_gids), now, Scale.MINUTE.value, Unit.KWH.value)
@@ -64,6 +67,7 @@ def collect_usage(retrys=3):
                     'name': props.device_name,
                     'location': (props.latitude, props.longitude),
                     'channels': channel_data,
+                    'outlet': 1 if dev_from_gid[gid].outlet.outlet_on else 0,
                 }
 
             sumarize_multi_dev(usage_data)
