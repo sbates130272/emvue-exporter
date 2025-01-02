@@ -20,7 +20,8 @@ repo. It should contain the following:
     "password": "<Emporia Password>"
 }
 ```
-Then run the following command:
+See the pypi entry for the [PyEmVue module][ref-pyemvue] for more
+information. Then run the following command:
 ```
 ./emvue-exporter.py
 ```
@@ -34,3 +35,4 @@ options:
 [ref-prom]: https://prometheus.io/
 [ref-emporia]: https://web.emporiaenergy.com/
 [ref-prom-port]:https://github.com/prometheus/prometheus/wiki/Default-port-allocations
+[ref-pyemvue]: https://pypi.org/project/pyemvue/
