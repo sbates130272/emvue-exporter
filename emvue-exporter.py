@@ -29,29 +29,50 @@ class emVueMetricsExporter:
     def __init__(self, port, interval):
         self.port = port
         self.interval = interval
-        self.guages = {}
+        self.power_guages = {}
+        self.on_enums = {}
 
-    def init_guage(self, name, desc):
-        self.guages[name] = pc.Gauge(name,
-                                     desc,
-                                     registry=pc.REGISTRY)
+    def init_power_guage(self, name, desc):
+        self.power_guages[name] = pc.Gauge(name,
+                                           desc,
+                                           registry=pc.REGISTRY)
+    def init_on_enum(self, name, desc):
+        self.on_enums[name] = pc.Enum(name,
+                                      desc,
+                                      states=['on', 'off'],
+                                      registry=pc.REGISTRY)
 
     def run(self):
         pc.start_http_server(port=self.port)
         while True:
+            outlets = vue.get_outlets()
             usage = emvue_collect_usage()
+            print("emvue-exporter: updating exporter page.")
             for gid, dev in usage.items():
                 dev = vue.populate_device_properties(dev)
                 ch = dev.channels[list(dev.channels.keys())[0]]
-                name = f"{dev.device_name.replace('-', '_')}"
+                gname = f"{dev.device_name.replace('-', '_')}_power"
                 if not ch.usage:
                     ch.usage = 0
                 else:
                     ch.usage *= 1000*60
-                if name not in self.guages:
-                    self.init_guage(name,
-                                    "Energy measurement (Joules).")
-                self.guages[name].set(ch.usage)
+                if gname not in self.power_guages:
+                    self.init_power_guage(gname,
+                                          "Energy measurement (Joules).")
+                self.power_guages[gname].set(ch.usage)
+                outlet = None
+                for o in outlets:
+                    if o.device_gid == dev.device_gid:
+                        outlet = o
+                if outlet:
+                    ename = f"{dev.device_name.replace('-', '_')}_on"
+                    if ename not in self.on_enums:
+                        self.init_on_enum(ename,
+                                          "Outlet state (on or off).")
+                    if outlet.outlet_on:
+                        self.on_enums[ename].state("on")
+                    else:
+                        self.on_enums[ename].state("off")
 
             time.sleep(self.interval)
 
@@ -76,12 +97,23 @@ if __name__ == '__main__':
                         help='The token file for the Emporia web-site.')
     args = parser.parse_args()
 
-    with open(args.auth_file) as f:
-        user_auth = json.load(f)
-
     vue = pyemvue.PyEmVue()
-    vue.login(username=user_auth['username'], password=user_auth['password'],
-              token_storage_file=args.token_file)
+    try:
+        with open(args.token_file) as f:
+            data = json.load(f)
+
+        vue.login(id_token=data['id_token'],
+                  access_token=data['access_token'],
+                  refresh_token=data['refresh_token'],
+                  token_storage_file=args.token_file)
+    except:
+        with open(args.auth_file) as f:
+            data = json.load(f)
+        vue.login(username=data['username'],
+                  password=data['password'],
+                  token_storage_file=args.token_file)
+
+    print("emvue-exporter: connected to Emporia web-server.")
     exporter = emVueMetricsExporter(port=args.port,
                                     interval=args.interval)
     try:
