@@ -40,6 +40,7 @@ class emVueMetricsExporter:
         pc.start_http_server(port=self.port)
         while True:
             usage = emvue_collect_usage()
+            print("emvue-exporter: updating exporter page.")
             for gid, dev in usage.items():
                 dev = vue.populate_device_properties(dev)
                 ch = dev.channels[list(dev.channels.keys())[0]]
@@ -76,12 +77,23 @@ if __name__ == '__main__':
                         help='The token file for the Emporia web-site.')
     args = parser.parse_args()
 
-    with open(args.auth_file) as f:
-        user_auth = json.load(f)
-
     vue = pyemvue.PyEmVue()
-    vue.login(username=user_auth['username'], password=user_auth['password'],
-              token_storage_file=args.token_file)
+    try:
+        with open(args.token_file) as f:
+            data = json.load(f)
+
+        vue.login(id_token=data['id_token'],
+                  access_token=data['access_token'],
+                  refresh_token=data['refresh_token'],
+                  token_storage_file=args.token_file)
+    except:
+        with open(args.auth_file) as f:
+            data = json.load(f)
+        vue.login(username=data['username'],
+                  password=data['password'],
+                  token_storage_file=args.token_file)
+
+    print("emvue-exporter: connected to Emporia web-server.")
     exporter = emVueMetricsExporter(port=args.port,
                                     interval=args.interval)
     try:
