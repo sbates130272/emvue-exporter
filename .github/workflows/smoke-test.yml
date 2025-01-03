@@ -1,0 +1,36 @@
+name: emvue-exporter
+on: [pull_request]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+      - name: Setup python and pip requirements
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Setup pip requirements
+        run: pip install -r requirements.txt
+      - name: Create .user.json file using secrets
+        run: |
+          echo '{' > .user.json
+          echo '    "username": "${{ secrets.EMPORIA_EMAIL }}",' >> .user.json
+          echo '    "password": "${{ secrets.EMPORIA_PASSWORD }}"' >> .user.json
+          echo '}' >> .user.json
+          touch .keys.json
+#      - name: Run the exporter as a background task
+#        uses: JarvusInnovations/background-action@v1.0.7
+#        with:
+#          run: ./emvue-exporter.py &
+#          wait-for: 30s
+#          wait-on: http://127.0.0.1:9947
+#          tail: stdout,stderr
+      - name: Run the exporter to ensure it is alive
+        run: ./emvue-exporter.py & sleep 10
+#      - name: Curl the exporter to ensure it is alive
+#        run: curl http://localhost:9947
