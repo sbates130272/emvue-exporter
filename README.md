@@ -31,6 +31,21 @@ options:
 ```
 ./emvue-exporter.py -h
 ```
+## Systemd Service Install
+
+You can install this as a systemd service on your using via the
+following steps (tested on Ubuntu 24.04):
+
+1. ```sudo python3 -m venv /usr/local/venvs/emvue-exporter```.
+1. ```sudo /usr/local/venvs/emvue-exporter/bin/pip install -r requirements.txt```.
+1. ```sudo cp emvue-exporter.py /usr/local/bin```.
+1. ```sudo cp emvue-exporter.service /etc/systemd/system/```.
+1. ```sudo mkdir -p /usr/local/share/emvue-exporter```.
+1. ```sudo cp .user.json /usr/local/share/emvue-exporter/.user.json```.
+1. ```sudo touch /usr/local/share/emvue-exporter/.keys.json```.
+1. ```sudo systemctl daemon-reload```
+1. ```sudo systemctl enable emvue-exporter.service```
+1. ```sudo systemctl start emvue-exporter.service```
 
 [ref-prom]: https://prometheus.io/
 [ref-emporia]: https://web.emporiaenergy.com/

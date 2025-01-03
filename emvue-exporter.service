@@ -1,0 +1,13 @@
+[Unit]
+Description=Emporia Smart Devices Prometheus Exporter
+After=network.target
+
+[Service]
+ExecStart=/usr/local/venvs/emvue-exporter/bin/python \
+    /usr/local/bin/emvue-exporter.py \
+    --auth_file /usr/local/share/emvue-exporter/.user.json \
+    --token_file /usr/local/share/emvue-exporter/.keys.json
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
