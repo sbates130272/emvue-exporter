@@ -1,0 +1,24 @@
+{
+    "snoc_pinewood_plug_a": {},
+    "snoc_pinewood_plug_b": {
+        "location": "Stephen's Bedroom",
+        "computer": "amd-laptop"
+    },
+    "snoc_pinewood_plug_c": {},
+    "snoc_pinewood_plug_d": {
+        "location": "Stephen's Bedroom",
+        "computer": "snoc-thinkstation"
+    },
+    "snoc_pinewood_plug_e": {},
+    "snoc_pinewood_plug_f": {
+        "location": "Stephen's Bedroom"
+    },
+    "snoc_pinewood_plug_g": {
+        "location": "Stephen's Bedroom",
+        "device": "White Homepod"
+    },
+    "snoc_pinewood_plug_h": {
+        "location": "Living Room",
+        "computer": "snoc-strix"
+    }
+}

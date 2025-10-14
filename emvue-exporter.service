@@ -6,7 +6,8 @@ After=network.target
 ExecStart=/usr/local/venvs/emvue-exporter/bin/python \
     /usr/local/bin/emvue-exporter.py \
     --auth_file /usr/local/share/emvue-exporter/.user.json \
-    --token_file /usr/local/share/emvue-exporter/.keys.json
+    --token_file /usr/local/share/emvue-exporter/.keys.json \
+    --labels_file /usr/local/share/emvue-exporter/labels.json
 Restart=always
 
 [Install]
