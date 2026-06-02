@@ -1,6 +1,7 @@
 emvue
 Emporia
 Grafana
+JSON
 PyEmVue
 pypi
 repo
