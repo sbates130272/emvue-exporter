@@ -1,24 +1,15 @@
 {
-    "snoc_pinewood_plug_a": {},
-    "snoc_pinewood_plug_b": {
-        "location": "Stephen's Bedroom",
-        "computer": "amd-laptop"
+    "example_plug_a": {
+        "name": "Outside lights",
+        "location": "Outside"
     },
-    "snoc_pinewood_plug_c": {},
-    "snoc_pinewood_plug_d": {
-        "location": "Stephen's Bedroom",
-        "computer": "snoc-thinkstation"
+    "example_plug_b": {
+        "name": "Garage freezer",
+        "location": "Garage"
     },
-    "snoc_pinewood_plug_e": {},
-    "snoc_pinewood_plug_f": {
-        "location": "Stephen's Bedroom"
-    },
-    "snoc_pinewood_plug_g": {
-        "location": "Stephen's Bedroom",
-        "device": "White Homepod"
-    },
-    "snoc_pinewood_plug_h": {
-        "location": "Living Room",
-        "computer": "snoc-strix"
+    "example_plug_c": {
+        "name": "Workstation",
+        "location": "Office",
+        "computer": "example-workstation"
     }
 }

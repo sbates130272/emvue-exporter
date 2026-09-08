@@ -25,12 +25,17 @@ def normalize_plug_labels(value):
     return {}
 
 
+def plug_key(name):
+    "Normalize a plug ID or Emporia device name to a lookup key."
+    return str(name).replace("-", "_")
+
+
 def load_plug_labels(labels_file):
     """
     Load per-plug Prometheus labels from JSON.
 
     Each plug ID maps to an object of label name/value pairs, e.g.:
-      "snoc_pinewood_plug_a": {"location": "Utility", "room": "basement"}
+      "snoc_pinewood_plug_a": {"name": "Utility", "room": "basement"}
 
     A bare string per plug is accepted as shorthand for
     {"location": "<string>"}. A top-level "labels" object is also accepted.
@@ -44,9 +49,23 @@ def load_plug_labels(labels_file):
     else:
         raw = data
     return {
-        str(plug_id): normalize_plug_labels(label_value)
+        plug_key(plug_id): normalize_plug_labels(label_value)
         for plug_id, label_value in raw.items()
     }
+
+
+def label_schema(plug_labels):
+    """
+    Return the label names every plug series must carry.
+
+    A Prometheus metric family has one fixed label set, but each plug
+    configures whatever labels it likes, so the family takes the union
+    of them all and plugs that omit one get an empty value for it.
+    """
+    names = set()
+    for labels in plug_labels.values():
+        names.update(labels)
+    return ("plug",) + tuple(sorted(names))
 
 
 def emvue_collect_usage():
@@ -73,67 +92,27 @@ class emVueMetricsExporter:
         self.port = port
         self.interval = interval
         self.plug_labels = load_plug_labels(labels_file) if labels_file else {}
-        self.power_gauges = {}
-        self.on_enums = {}
+        self.labelnames = label_schema(self.plug_labels)
+        self.power = pc.Gauge(
+            "emvue_plug_power_watts",
+            "Mean power drawn by the plug over the last minute (Watts).",
+            labelnames=self.labelnames,
+            registry=pc.REGISTRY,
+        )
+        self.on = pc.Gauge(
+            "emvue_plug_on",
+            "Outlet state: 1 when on, 0 when off.",
+            labelnames=self.labelnames,
+            registry=pc.REGISTRY,
+        )
 
-    def plug_id_from_device(self, device_name):
-        return device_name.replace("-", "_")
-
-    def get_plug_labels(self, plug_id):
-        return self.plug_labels.get(plug_id, {})
-
-    def init_power_gauge(self, name, desc, labelnames):
-        if name not in self.power_gauges:
-            names = sorted(labelnames) if labelnames else ()
-            if names:
-                self.power_gauges[name] = pc.Gauge(
-                    name,
-                    desc,
-                    labelnames=names,
-                    registry=pc.REGISTRY,
-                )
-            else:
-                self.power_gauges[name] = pc.Gauge(
-                    name,
-                    desc,
-                    registry=pc.REGISTRY,
-                )
-        return self.power_gauges[name]
-
-    def init_on_enum(self, name, desc, labelnames):
-        if name not in self.on_enums:
-            names = sorted(labelnames) if labelnames else ()
-            if names:
-                self.on_enums[name] = pc.Enum(
-                    name,
-                    desc,
-                    states=["on", "off"],
-                    labelnames=names,
-                    registry=pc.REGISTRY,
-                )
-            else:
-                self.on_enums[name] = pc.Enum(
-                    name,
-                    desc,
-                    states=["on", "off"],
-                    registry=pc.REGISTRY,
-                )
-        return self.on_enums[name]
-
-    def set_power(self, name, desc, plug_labels, value):
-        gauge = self.init_power_gauge(name, desc, plug_labels.keys())
-        if plug_labels:
-            gauge.labels(**plug_labels).set(value)
-        else:
-            gauge.set(value)
-
-    def set_on_state(self, name, desc, plug_labels, outlet_on):
-        enum = self.init_on_enum(name, desc, plug_labels.keys())
-        state = "on" if outlet_on else "off"
-        if plug_labels:
-            enum.labels(**plug_labels).state(state)
-        else:
-            enum.state(state)
+    def get_plug_labels(self, device_name):
+        "Return the full label set for one plug, empties included."
+        configured = self.plug_labels.get(plug_key(device_name), {})
+        labels = {"plug": device_name}
+        for name in self.labelnames[1:]:
+            labels[name] = configured.get(name, "")
+        return labels
 
     def run(self):
         pc.start_http_server(port=self.port)
@@ -141,33 +120,27 @@ class emVueMetricsExporter:
             outlets = vue.get_outlets()
             usage = emvue_collect_usage()
             print("emvue-exporter: updating exporter page.")
+            # A plug taken off the account otherwise keeps serving its
+            # last reading for ever: the series never goes stale, it
+            # just stops moving.
+            self.power.clear()
+            self.on.clear()
             for gid, dev in usage.items():
                 dev = vue.populate_device_properties(dev)
                 ch = dev.channels[list(dev.channels.keys())[0]]
-                plug_id = self.plug_id_from_device(dev.device_name)
-                plug_labels = self.get_plug_labels(plug_id)
-                gname = f"{plug_id}_power"
-                if not ch.usage:
-                    ch.usage = 0
-                else:
-                    ch.usage *= 1000 * 60
-                self.set_power(
-                    gname,
-                    "Energy measurement (Joules).",
-                    plug_labels,
-                    ch.usage,
-                )
+                plug_labels = self.get_plug_labels(dev.device_name)
+                # The API reports kWh accumulated over the last minute.
+                # Scaling to Wh and then to an hourly rate gives the
+                # mean power over that minute.
+                watts = (ch.usage or 0) * 1000 * 60
+                self.power.labels(**plug_labels).set(watts)
                 outlet = None
                 for o in outlets:
                     if o.device_gid == dev.device_gid:
                         outlet = o
                 if outlet:
-                    ename = f"{plug_id}_on"
-                    self.set_on_state(
-                        ename,
-                        "Outlet state (on or off).",
-                        plug_labels,
-                        outlet.outlet_on,
+                    self.on.labels(**plug_labels).set(
+                        1 if outlet.outlet_on else 0
                     )
 
             time.sleep(self.interval)
@@ -213,7 +186,8 @@ if __name__ == "__main__":
         default=None,
         help=(
             "JSON file mapping each plug ID to Prometheus label key/value "
-            "pairs (objects), or a location string shorthand"
+            "pairs (objects), or a location string shorthand. Use a 'name' "
+            "label for the human-readable plug name"
         ),
     )
     args = parser.parse_args()
