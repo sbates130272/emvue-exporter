@@ -40,10 +40,10 @@ families, one series per plug:
 ```
 # HELP emvue_plug_power_watts Mean power drawn by the plug over the last minute (Watts).
 # TYPE emvue_plug_power_watts gauge
-emvue_plug_power_watts{plug="snoc-pinewood-plug-a",name="Outside lights"} 75.4
+emvue_plug_power_watts{plug="example-plug-a",name="Outside lights"} 75.4
 # HELP emvue_plug_on Outlet state: 1 when on, 0 when off.
 # TYPE emvue_plug_on gauge
-emvue_plug_on{plug="snoc-pinewood-plug-a",name="Outside lights"} 1.0
+emvue_plug_on{plug="example-plug-a",name="Outside lights"} 1.0
 ```
 
 The ```plug``` label is the Emporia device name. Because these are
@@ -56,17 +56,18 @@ a single query, ```emvue_plug_power_watts``` with a legend format of
 Further Prometheus labels per plug are defined in a JSON file passed
 with ```--labels_file```. Keys must match the Emporia device name,
 either as-is or with hyphens replaced by underscores (for example
-```snoc_pinewood_plug_a```). Each plug maps to an object of label
+```example_plug_a```). Each plug maps to an object of label
 name/value pairs:
 
 ```
 {
-    "snoc_pinewood_plug_a": {
-        "name": "Utility room",
-        "room": "basement"
+    "example_plug_a": {
+        "name": "Outside lights",
+        "location": "Outside"
     },
-    "snoc_pinewood_plug_b": {
-        "name": "Garage freezer"
+    "example_plug_b": {
+        "name": "Garage freezer",
+        "location": "Garage"
     }
 }
 ```
